@@ -65,4 +65,12 @@ module rv32i_id_stage (
     end
   end
 
+`ifndef SYNTHESIS
+  always @(*) begin
+    if (if_valid_i && illegal_instr) begin
+      $fatal(1, "[rv32i_id_stage] Illegal instruction 0x%08x at PC 0x%08x", if_payload_i.instr, if_payload_i.pc);
+    end
+  end
+`endif
+
 endmodule : rv32i_id_stage
