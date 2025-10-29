@@ -1,1 +1,1 @@
-# rsicv-core
+# riscv-core
