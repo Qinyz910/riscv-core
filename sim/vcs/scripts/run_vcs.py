@@ -139,7 +139,11 @@ def build_environment_summary(config: FlowConfig, vcs_path: Path) -> str:
 def resolve_source_directories(config: FlowConfig) -> tuple[list[Path], list[Path]]:
     """Determine RTL and TB directories using environment overrides as needed."""
     default_rtl = [config.project_root / "rtl"]
-    default_tb = [config.sim_root / "tb"]
+    default_tb = [
+        config.project_root / "tb" / "src",
+        config.project_root / "tb",
+        config.sim_root / "tb",
+    ]
 
     rtl_dirs = parse_path_list(os.environ.get("VCS_RTL_DIRS")) or default_rtl
     tb_dirs = parse_path_list(os.environ.get("VCS_TB_DIRS")) or default_tb
@@ -177,6 +181,7 @@ def resolve_program_image(config: FlowConfig) -> Path | None:
     search_roots = parse_path_list(os.environ.get("VCS_TEST_DIRS"))
     if not search_roots:
         search_roots = [
+            config.project_root / "tb" / "programs",
             config.project_root / "tests" / "directed",
             config.project_root / "tests" / "isa",
             config.project_root / "tests" / "programs",
@@ -253,6 +258,7 @@ def invoke_compile(
 def invoke_simulation(
     config: FlowConfig,
     program_image: Path | None,
+    expectation_image: Path | None,
     build_dir: Path,
     run_dir: Path,
     wave_dir: Path,
@@ -263,10 +269,13 @@ def invoke_simulation(
     if not simv.exists():
         raise FlowError(f"Simulation executable not found: {simv}. Run the compile stage first.")
 
-    command: list[str] = [str(simv), "+vcs+lic+wait", f"+TEST={config.test}"]
+    command: list[str] = [str(simv), "+vcs+lic+wait", f"+TEST={config.test}", f"+PROJECT_ROOT={config.project_root}"]
 
     if program_image:
         command.append(f"+PROGRAM={program_image}")
+
+    if expectation_image:
+        command.append(f"+EXPECT={expectation_image}")
 
     if config.wave:
         wave_dir.mkdir(parents=True, exist_ok=True)
@@ -308,7 +317,12 @@ def run_flow(config: FlowConfig) -> None:
     sources, extra_filelists = gather_sources(config)
 
     program_image = resolve_program_image(config)
-    if not program_image:
+    expectation_image: Path | None = None
+    if program_image:
+        candidate = program_image.with_suffix(".exp")
+        if candidate.exists():
+            expectation_image = candidate
+    else:
         print(
             "Warning: No program image resolved for test '{}' (override with --program or VCS_TEST_DIRS).".format(
                 config.test
@@ -333,6 +347,7 @@ def run_flow(config: FlowConfig) -> None:
     invoke_simulation(
         config=config,
         program_image=program_image,
+        expectation_image=expectation_image,
         build_dir=build_dir,
         run_dir=run_dir,
         wave_dir=wave_dir,
