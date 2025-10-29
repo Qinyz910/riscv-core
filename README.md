@@ -35,6 +35,10 @@ For an in-depth architectural description, refer to [`docs/architecture.md`](doc
    ```bash
    make -C sim/verilator run-smoke
    ```
+6. **(Optional) Exercise the VCS flow**
+   ```bash
+   make -C sim/vcs run TEST=smoke WAVE=1
+   ```
 
 ## Verification & Testing
 
