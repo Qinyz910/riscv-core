@@ -64,6 +64,12 @@ Install toolchain packages using your OS distribution or the official RISC-V GNU
    ```
    This compiles the RTL, links against the Verilator harness, and executes the basic ISA sanity tests. Waveforms are written to `sim/verilator/out/` by default.
 
+5. **(Optional) Run with Synopsys VCS**
+   ```bash
+   make -C sim/vcs run TEST=smoke WAVE=1
+   ```
+   The VCS flow performs the same source discovery and elaboration steps, writing outputs to `sim/vcs/out/<test>/`. Tweak the `TEST` parameter to change the program image and set `COVERAGE=1` to collect VCS coverage data.
+
 ## Detailed Simulation Flow
 
 1. **RTL Elaboration**: The make target triggers Verilator to translate SystemVerilog sources under `rtl/` into a cycle-accurate C++ model.
