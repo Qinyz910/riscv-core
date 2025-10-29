@@ -16,6 +16,9 @@ sim/**/logs/
 *.jou
 *.wlf
 
+tests/programs/*.elf
+tests/programs/*.bin
+
 # Python cache
 __pycache__/
 *.pyc
