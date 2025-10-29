@@ -182,13 +182,20 @@ Protocol: Dual-read, single-write synchronous register file with write-through b
 
 | Port                     | Dir | Width | Description                                         |
 |--------------------------|:---:|:-----:|-----------------------------------------------------|
-| `id_rs1_addr_i`          |  in |   5   | ID stage RS1.                                       |
-| `id_rs2_addr_i`          |  in |   5   | ID stage RS2.                                       |
+| `clk_i`                  |  in |   1   | Clock input for assertions.                         |
+| `rst_ni`                 |  in |   1   | Active-low synchronous reset.                       |
+| `id_rs1_addr_i`          |  in |   5   | ID stage RS1 address.                               |
+| `id_rs2_addr_i`          |  in |   5   | ID stage RS2 address.                               |
 | `ex_rd_addr_i`           |  in |   5   | EX stage destination register.                      |
+| `ex_regwrite_i`          |  in |   1   | EX stage writeback enable.                          |
 | `ex_memread_i`           |  in |   1   | Indicates EX is performing a load.                  |
 | `pipeline_valid_i`       |  in |   3   | Valid bits for ID/EX/MEM pipeline stages.           |
-| `stall_o`                | out |   1   | Request stall insertion.                            |
-| `flush_o`                | out |   1   | Request pipeline flush (on branch mispredict).      |
+| `branch_flush_i`         |  in |   1   | Branch/jump resolution requesting flush.            |
+| `structural_hazard_i`    |  in |   1   | Structural/busy indication requesting stall.        |
+| `stall_o`                | out |   1   | Request stall insertion (IF/ID hold, bubble in EX). |
+| `flush_o`                | out |   1   | Request pipeline flush (takes priority over stall). |
+
+The hazard unit prioritises pipeline flushes over stall requests so redirected control flow clears older stages without deadlock. An internal assertion flags any illegal simultaneous stall and flush requests, catching contradictory control before synthesis or simulation.
 
 ## Interrupt & Debug Interface (`debug_unit`)
 
