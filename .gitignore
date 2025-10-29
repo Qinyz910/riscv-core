@@ -1,0 +1,25 @@
+# Build artifacts
+build/
+*/build/
+
+# Simulation outputs
+sim/**/out/
+sim/**/logs/
+*.vcd
+*.fst
+*.fsdb
+
+# Tool-generated files
+*.d
+*.o
+*.log
+*.jou
+*.wlf
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE settings
+.vscode/
+.idea/
