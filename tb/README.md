@@ -11,9 +11,9 @@ plusargs.  The testbench is intended to be consumed by the VCS flow under
 
 - **`rv32i_tb_pkg.sv`** – shared typedefs, configuration helpers, and utility
   routines for the verification environment.
-- **`rv32i_imem_model.sv`** – instruction memory model with single-cycle latency
-  and support for loading hex/ELF images.
-- **`rv32i_dmem_model.sv`** – data memory model that applies byte enables,
+- **`rv32i_imem_model.sv`** – Wishbone-compatible instruction ROM with configurable
+  latency and support for loading hex/ELF images.
+- **`rv32i_dmem_model.sv`** – Wishbone data RAM that applies byte enables,
   captures load/store activity, and exposes transaction events for the scoreboard.
 - **`rv32i_scoreboard.sv`** – checks store transactions against expectations read
   from disk and raises pass/fail events.
