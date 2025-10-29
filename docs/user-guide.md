@@ -11,7 +11,7 @@ Welcome to the `riscv-core` project. This guide helps you navigate the repositor
 ├── docs/                # Architecture design, user guide, and interface references
 ├── rtl/                 # Core RTL sources (SystemVerilog)
 │   ├── core/            # Pipeline stages, register file, CSR unit
-│   ├── bus/             # AXI-lite interface shims
+│   ├── bus/             # Wishbone adapters and arbitration logic
 │   └── top/             # SoC integration examples
 ├── sim/                 # Simulation harnesses and scripts
 │   ├── verilator/       # Verilator projects and makefiles

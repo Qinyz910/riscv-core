@@ -6,7 +6,7 @@
 
 - **Pipeline**: Classic IF/ID/EX/MEM/WB pipeline with robust hazard and forwarding logic.
 - **Instruction Set**: Full RV32I support with optional RV32M (multiply/divide) and RV32C (compressed) extensions.
-- **Interfaces**: Clean ready/valid instruction interface and AXI-lite style data interface for easy system integration.
+- **Interfaces**: Clean ready/valid stage interfaces backed by Wishbone Classic adapters for easy system integration.
 - **Verification**: Verilator-based simulation harness, ISA compliance suites, and directed/randomized tests.
 
 For an in-depth architectural description, refer to [`docs/architecture.md`](docs/architecture.md).

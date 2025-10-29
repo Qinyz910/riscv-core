@@ -4,6 +4,7 @@
 `timescale 1ns/1ps
 
 import rv32i_tb_pkg::*;
+import rv32i_wb_pkg::*;
 
 module rv32i_core_tb_top;
 
@@ -29,6 +30,7 @@ module rv32i_core_tb_top;
   logic [31:0] data_wdata;
   logic        data_rvalid;
   logic [31:0] data_rdata;
+  logic        data_gnt;
 
   logic        dbg_halted;
 
@@ -37,8 +39,67 @@ module rv32i_core_tb_top;
   logic [31:0] store_addr;
   logic [31:0] store_data;
 
+  // Internal Wishbone interconnect wires
+  logic        if_wb_cyc;
+  logic        if_wb_stb;
+  logic        if_wb_we;
+  logic [WB_SEL_WIDTH-1:0] if_wb_sel;
+  logic [WB_ADDR_WIDTH-1:0] if_wb_adr;
+  logic [WB_DATA_WIDTH-1:0] if_wb_wdata;
+  logic [WB_DATA_WIDTH-1:0] if_wb_rdata;
+  logic        if_wb_ack;
+  logic        if_wb_err;
+  logic        if_wb_stall;
+
+  logic        mem_wb_cyc;
+  logic        mem_wb_stb;
+  logic        mem_wb_we;
+  logic [WB_SEL_WIDTH-1:0] mem_wb_sel;
+  logic [WB_ADDR_WIDTH-1:0] mem_wb_adr;
+  logic [WB_DATA_WIDTH-1:0] mem_wb_wdata;
+  logic [WB_DATA_WIDTH-1:0] mem_wb_rdata;
+  logic        mem_wb_ack;
+  logic        mem_wb_err;
+  logic        mem_wb_stall;
+
+  logic        wb_bus_cyc;
+  logic        wb_bus_stb;
+  logic        wb_bus_we;
+  logic [WB_SEL_WIDTH-1:0] wb_bus_sel;
+  logic [WB_ADDR_WIDTH-1:0] wb_bus_adr;
+  logic [WB_DATA_WIDTH-1:0] wb_bus_wdata;
+  logic [WB_DATA_WIDTH-1:0] wb_bus_rdata;
+  logic        wb_bus_ack;
+  logic        wb_bus_err;
+  logic        wb_bus_stall;
+
+  logic        imem_wb_cyc;
+  logic        imem_wb_stb;
+  logic        imem_wb_we;
+  logic [WB_SEL_WIDTH-1:0] imem_wb_sel;
+  logic [WB_ADDR_WIDTH-1:0] imem_wb_adr;
+  logic [WB_DATA_WIDTH-1:0] imem_wb_wdata;
+  logic [WB_DATA_WIDTH-1:0] imem_wb_rdata;
+  logic        imem_wb_ack;
+  logic        imem_wb_err;
+  logic        imem_wb_stall;
+
+  logic        dmem_wb_cyc;
+  logic        dmem_wb_stb;
+  logic        dmem_wb_we;
+  logic [WB_SEL_WIDTH-1:0] dmem_wb_sel;
+  logic [WB_ADDR_WIDTH-1:0] dmem_wb_adr;
+  logic [WB_DATA_WIDTH-1:0] dmem_wb_wdata;
+  logic [WB_DATA_WIDTH-1:0] dmem_wb_rdata;
+  logic        dmem_wb_ack;
+  logic        dmem_wb_err;
+  logic        dmem_wb_stall;
+
+  logic        instr_rsp_err;
+  logic        data_rsp_err;
+
   // Simulation configuration
-  string       test_name;
+
   string       project_root;
   string       program_path;
   string       expect_path;
@@ -51,32 +112,164 @@ module rv32i_core_tb_top;
   // Timeouts and bookkeeping
   int unsigned cycle_count;
 
+  rv32i_wb_instr_adapter instr_adapter_i (
+    .clk_i        (clk),
+    .rst_ni       (rst_ni),
+    .req_i        (instr_req),
+    .addr_i       (instr_addr),
+    .gnt_o        (instr_gnt),
+    .rsp_valid_o  (instr_rvalid),
+    .rsp_rdata_o  (instr_rdata),
+    .rsp_err_o    (instr_rsp_err),
+    .wb_cyc_o     (if_wb_cyc),
+    .wb_stb_o     (if_wb_stb),
+    .wb_we_o      (if_wb_we),
+    .wb_sel_o     (if_wb_sel),
+    .wb_adr_o     (if_wb_adr),
+    .wb_dat_o     (if_wb_wdata),
+    .wb_dat_i     (if_wb_rdata),
+    .wb_ack_i     (if_wb_ack),
+    .wb_err_i     (if_wb_err),
+    .wb_stall_i   (if_wb_stall)
+  );
+
+  rv32i_wb_data_adapter data_adapter_i (
+    .clk_i            (clk),
+    .rst_ni           (rst_ni),
+    .req_i            (data_req),
+    .we_i             (data_we),
+    .be_i             (data_be),
+    .addr_i           (data_addr),
+    .wdata_i          (data_wdata),
+    .gnt_o            (data_gnt),
+    .rsp_valid_o      (data_rvalid),
+    .rsp_rdata_o      (data_rdata),
+    .rsp_err_o        (data_rsp_err),
+    .store_complete_o (),
+    .store_err_o      (),
+    .wb_cyc_o         (mem_wb_cyc),
+    .wb_stb_o         (mem_wb_stb),
+    .wb_we_o          (mem_wb_we),
+    .wb_sel_o         (mem_wb_sel),
+    .wb_adr_o         (mem_wb_adr),
+    .wb_dat_o         (mem_wb_wdata),
+    .wb_dat_i         (mem_wb_rdata),
+    .wb_ack_i         (mem_wb_ack),
+    .wb_err_i         (mem_wb_err),
+    .wb_stall_i       (mem_wb_stall)
+  );
+
+  rv32i_wb_arbiter wb_arb_i (
+    .clk_i         (clk),
+    .rst_ni        (rst_ni),
+    .instr_cyc_i   (if_wb_cyc),
+    .instr_stb_i   (if_wb_stb),
+    .instr_we_i    (if_wb_we),
+    .instr_sel_i   (if_wb_sel),
+    .instr_adr_i   (if_wb_adr),
+    .instr_dat_i   (if_wb_wdata),
+    .instr_dat_o   (if_wb_rdata),
+    .instr_ack_o   (if_wb_ack),
+    .instr_err_o   (if_wb_err),
+    .instr_stall_o (if_wb_stall),
+    .data_cyc_i    (mem_wb_cyc),
+    .data_stb_i    (mem_wb_stb),
+    .data_we_i     (mem_wb_we),
+    .data_sel_i    (mem_wb_sel),
+    .data_adr_i    (mem_wb_adr),
+    .data_dat_i    (mem_wb_wdata),
+    .data_dat_o    (mem_wb_rdata),
+    .data_ack_o    (mem_wb_ack),
+    .data_err_o    (mem_wb_err),
+    .data_stall_o  (mem_wb_stall),
+    .bus_cyc_o     (wb_bus_cyc),
+    .bus_stb_o     (wb_bus_stb),
+    .bus_we_o      (wb_bus_we),
+    .bus_sel_o     (wb_bus_sel),
+    .bus_adr_o     (wb_bus_adr),
+    .bus_dat_o     (wb_bus_wdata),
+    .bus_dat_i     (wb_bus_rdata),
+    .bus_ack_i     (wb_bus_ack),
+    .bus_err_i     (wb_bus_err),
+    .bus_stall_i   (wb_bus_stall)
+  );
+
+  rv32i_wb_router #(
+    .IMEM_BASE_ADDR   (32'h0000_0000),
+    .IMEM_DEPTH_WORDS (4096),
+    .DMEM_BASE_ADDR   (32'h8000_0000),
+    .DMEM_DEPTH_WORDS (4096)
+  ) wb_router_i (
+    .clk_i        (clk),
+    .rst_ni       (rst_ni),
+    .m_cyc_i      (wb_bus_cyc),
+    .m_stb_i      (wb_bus_stb),
+    .m_we_i       (wb_bus_we),
+    .m_sel_i      (wb_bus_sel),
+    .m_adr_i      (wb_bus_adr),
+    .m_dat_i      (wb_bus_wdata),
+    .m_dat_o      (wb_bus_rdata),
+    .m_ack_o      (wb_bus_ack),
+    .m_err_o      (wb_bus_err),
+    .m_stall_o    (wb_bus_stall),
+    .imem_cyc_o   (imem_wb_cyc),
+    .imem_stb_o   (imem_wb_stb),
+    .imem_we_o    (imem_wb_we),
+    .imem_sel_o   (imem_wb_sel),
+    .imem_adr_o   (imem_wb_adr),
+    .imem_dat_o   (imem_wb_wdata),
+    .imem_dat_i   (imem_wb_rdata),
+    .imem_ack_i   (imem_wb_ack),
+    .imem_err_i   (imem_wb_err),
+    .imem_stall_i (imem_wb_stall),
+    .dmem_cyc_o   (dmem_wb_cyc),
+    .dmem_stb_o   (dmem_wb_stb),
+    .dmem_we_o    (dmem_wb_we),
+    .dmem_sel_o   (dmem_wb_sel),
+    .dmem_adr_o   (dmem_wb_adr),
+    .dmem_dat_o   (dmem_wb_wdata),
+    .dmem_dat_i   (dmem_wb_rdata),
+    .dmem_ack_i   (dmem_wb_ack),
+    .dmem_err_i   (dmem_wb_err),
+    .dmem_stall_i (dmem_wb_stall)
+  );
+
   rv32i_imem_model #(
     .NAME("imem"),
-    .MEM_DEPTH_WORDS(4096)
+    .MEM_DEPTH_WORDS(4096),
+    .BASE_ADDR(32'h0000_0000)
   ) imem_i (
-    .clk_i     (clk),
-    .rst_ni    (rst_ni),
-    .req_i     (instr_req),
-    .gnt_o     (instr_gnt),
-    .addr_i    (instr_addr),
-    .rvalid_o  (instr_rvalid),
-    .rdata_o   (instr_rdata)
+    .clk_i      (clk),
+    .rst_ni     (rst_ni),
+    .wb_cyc_i   (imem_wb_cyc),
+    .wb_stb_i   (imem_wb_stb),
+    .wb_we_i    (imem_wb_we),
+    .wb_sel_i   (imem_wb_sel),
+    .wb_adr_i   (imem_wb_adr),
+    .wb_dat_i   (imem_wb_wdata),
+    .wb_dat_o   (imem_wb_rdata),
+    .wb_ack_o   (imem_wb_ack),
+    .wb_err_o   (imem_wb_err),
+    .wb_stall_o (imem_wb_stall)
   );
 
   rv32i_dmem_model #(
     .NAME("dmem"),
-    .MEM_DEPTH_WORDS(4096)
+    .MEM_DEPTH_WORDS(4096),
+    .BASE_ADDR(32'h8000_0000)
   ) dmem_i (
     .clk_i         (clk),
     .rst_ni        (rst_ni),
-    .req_i         (data_req),
-    .we_i          (data_we),
-    .be_i          (data_be),
-    .addr_i        (data_addr),
-    .wdata_i       (data_wdata),
-    .rvalid_o      (data_rvalid),
-    .rdata_o       (data_rdata),
+    .wb_cyc_i      (dmem_wb_cyc),
+    .wb_stb_i      (dmem_wb_stb),
+    .wb_we_i       (dmem_wb_we),
+    .wb_sel_i      (dmem_wb_sel),
+    .wb_adr_i      (dmem_wb_adr),
+    .wb_dat_i      (dmem_wb_wdata),
+    .wb_dat_o      (dmem_wb_rdata),
+    .wb_ack_o      (dmem_wb_ack),
+    .wb_err_o      (dmem_wb_err),
+    .wb_stall_o    (dmem_wb_stall),
     .store_valid_o (store_valid),
     .store_addr_o  (store_addr),
     .store_data_o  (store_data)
@@ -96,6 +289,16 @@ module rv32i_core_tb_top;
     .done_o       (scoreboard_done),
     .pass_o       (scoreboard_pass)
   );
+
+  // Flag Wishbone error responses in simulation.
+  always_ff @(posedge clk) begin
+    if (instr_rsp_err) begin
+      $fatal(1, "[tb] Instruction bus error observed at time %0t", $time);
+    end
+    if (data_rsp_err) begin
+      $fatal(1, "[tb] Data bus error observed at time %0t", $time);
+    end
+  end
 
   // Clock generation
   initial begin

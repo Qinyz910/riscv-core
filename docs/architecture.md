@@ -25,7 +25,7 @@ The core follows the classic five-stage RISC pipeline. Each stage has a well-def
    - Produces branch resolution information (taken/target) that may trigger pipeline redirects.
 
 4. **Memory (MEM)**
-   - Interfaces with the data memory subsystem via an AXI-lite inspired request/response channel.
+   - Interfaces with the data memory subsystem through Wishbone Classic adapters shared with the instruction fetch front-end.
    - Handles load/store alignment, byte-enable generation, and sign/zero extension for load results.
    - Provides memory stage results to MEM/WB pipeline register and forwards data back to EX when necessary.
 
@@ -57,7 +57,7 @@ core_top
 ├── mem_stage
 │   ├── dcache_if (optional)
 │   ├── load_store_unit
-│   └── axi_lite_master
+│   └── wishbone_master
 ├── wb_stage
 │   ├── result_mux
 │   └── csr_unit
@@ -73,7 +73,7 @@ core_top
 - **Fetch Subsystem**: Responsible for PC sequencing, instruction memory protocol conversion, and optional instruction cache integration.
 - **Decode Subsystem**: Houses the register file and the hazard detection logic that orchestrates stalls/bubbles.
 - **Execute Subsystem**: Implements arithmetic, logic, multiply/divide (when enabled), and branch condition evaluation.
-- **Memory Subsystem**: Converts pipeline memory requests into AXI-lite (or generic ready/valid) transactions and manages memory responses.
+- **Memory Subsystem**: Converts pipeline memory requests into Wishbone Classic transactions shared by instruction and data paths while managing arbitration and response ordering.
 - **Control & Debug**: Centralizes forwarding, exceptions, and CSR-related control, ensuring consistent status reporting.
 
 ## Instruction Support Matrix
@@ -101,7 +101,7 @@ The table below enumerates the planned instruction coverage. "Y" indicates compl
 
 ## Memory Subsystem & CSR Interaction
 
-- **Memory Interface**: A simple ready/valid protocol (compatible with AXI-lite concepts) handles instruction and data accesses. The interface supports byte-enable signaling for sub-word operations and accepts back-pressure from downstream memory.
+- **Memory Interface**: A ready/valid request channel feeds Wishbone Classic adapters that issue shared instruction/data transactions. The interface supports byte-enable signaling for sub-word operations and accepts back-pressure from downstream memory or wait-state inserting models.
 - **CSR Unit**: Provides access to machine-mode CSRs, including `mstatus`, `mtvec`, `mepc`, `mcause`, and `mtime`. CSR side effects (e.g., interrupts, exceptions) propagate control signals back to IF to redirect execution.
 
 ## Pipeline Timing Diagrams
