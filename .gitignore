@@ -1,28 +1,67 @@
 # Build artifacts
 build/
-*/build/
+**/build/
+**/dist/
 
 # Simulation outputs
 sim/**/out/
 sim/**/logs/
+sim/**/csrc/
+sim/**/simv*
+sim/**/simv.daidir/
+sim/**/ucli.key
+sim/**/DVEfiles/
+sim/**/Novas*/
+sim/**/work/
+
+# Waveforms & debug databases
 *.vcd
+*.vpd
 *.fst
 *.fsdb
+*.svdb
+*.wlf
+*.ddb
+*.ucdb
 
-# Tool-generated files
+# Compiler & synthesis byproducts
 *.d
 *.o
+*.so
+*.dll
+*.exe
 *.log
 *.jou
-*.wlf
+*.sdf
 
-tests/programs/*.elf
-tests/programs/*.bin
+# Generated test binaries
+**/*.elf
+**/*.bin
+**/*.hex
+
+# Coverage and reports
+coverage/
+reports/
+*.cov
+*.xml
+
+# Documentation artifacts
+docs/_build/
+docs/.cache/
+*.aux
+*.toc
+*.out
+*.pdf
+*.html
 
 # Python cache
 __pycache__/
 *.pyc
 
-# IDE settings
+# Editor & OS files
 .vscode/
 .idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
