@@ -20,6 +20,8 @@ module rv32i_ex_stage (
   logic        cmp_eq;
   logic        cmp_lt;
   logic        cmp_ltu;
+  logic        alu_result_ready;
+  logic        alu_cmp_ready;
   logic [31:0] pc_plus_imm;
   logic [31:0] jalr_target;
   logic        branch_condition_met;
@@ -41,13 +43,15 @@ module rv32i_ex_stage (
   end
 
   rv32i_alu alu_i (
-    .operand_a_i (operand_a),
-    .operand_b_i (operand_b),
-    .op_i        (id_payload_i.alu_op),
-    .result_o    (alu_result),
-    .cmp_eq_o    (cmp_eq),
-    .cmp_lt_o    (cmp_lt),
-    .cmp_ltu_o   (cmp_ltu)
+    .operand_a_i     (operand_a),
+    .operand_b_i     (operand_b),
+    .op_i            (id_payload_i.alu_op),
+    .result_o        (alu_result),
+    .cmp_eq_o        (cmp_eq),
+    .cmp_lt_o        (cmp_lt),
+    .cmp_ltu_o       (cmp_ltu),
+    .result_ready_o  (alu_result_ready),
+    .cmp_ready_o     (alu_cmp_ready)
   );
 
   assign pc_plus_imm = id_payload_i.pc + id_payload_i.imm;
@@ -55,15 +59,17 @@ module rv32i_ex_stage (
 
   always_comb begin
     branch_condition_met = 1'b0;
-    unique case (id_payload_i.branch_type)
-      BR_EQ:  branch_condition_met = cmp_eq;
-      BR_NE:  branch_condition_met = !cmp_eq;
-      BR_LT:  branch_condition_met = cmp_lt;
-      BR_GE:  branch_condition_met = !cmp_lt;
-      BR_LTU: branch_condition_met = cmp_ltu;
-      BR_GEU: branch_condition_met = !cmp_ltu;
-      default: branch_condition_met = 1'b0;
-    endcase
+    if (alu_cmp_ready) begin
+      unique case (id_payload_i.branch_type)
+        BR_EQ:  branch_condition_met = cmp_eq;
+        BR_NE:  branch_condition_met = !cmp_eq;
+        BR_LT:  branch_condition_met = cmp_lt;
+        BR_GE:  branch_condition_met = !cmp_lt;
+        BR_LTU: branch_condition_met = cmp_ltu;
+        BR_GEU: branch_condition_met = !cmp_ltu;
+        default: branch_condition_met = 1'b0;
+      endcase
+    end
   end
 
   assign branch_taken   = id_valid_i && ((id_payload_i.branch && branch_condition_met) || id_payload_i.jump);
@@ -89,6 +95,16 @@ module rv32i_ex_stage (
     ex_payload_o.jalr         = id_payload_i.jalr;
   end
 
-  assign ex_valid_o = id_valid_i;
+  assign ex_valid_o = id_valid_i && alu_result_ready;
+
+`ifndef SYNTHESIS
+  always_comb begin
+    if ($isunknown({alu_result_ready, alu_cmp_ready})) begin
+      $fatal(1, "[rv32i_ex_stage] ALU ready signals contain X/Z values");
+    end else if (!alu_result_ready || !alu_cmp_ready) begin
+      $fatal(1, "[rv32i_ex_stage] ALU ready signals deasserted in single-cycle configuration");
+    end
+  end
+`endif
 
 endmodule : rv32i_ex_stage
